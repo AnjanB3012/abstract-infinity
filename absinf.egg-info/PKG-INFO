@@ -1,0 +1,4 @@
+Metadata-Version: 2.1
+Name: absinf
+Version: 1.0
+Summary: AbsInf object that is always greater than any number
