@@ -1,0 +1,2 @@
+The CDF of the test: 0.00021754201661584033
+AbsInf was faster in approximately 87.125% � 33.51325555466584% of tests

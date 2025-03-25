@@ -1,0 +1,490 @@
+import time
+import timeit
+from absinf import AbsInf
+import math
+from scipy.stats import t
+import tqdm
+import sys
+
+sys.stdout = open("benchmarks\\t_test_output.txt","w")
+
+def dijkstra_basic(graph, start):
+    # Step 1: Set initial distances to infinity, except for the start node
+    unvisited = list(graph.keys())
+    # distances = {node: absinf.absinf() for node in graph}
+    distances = {node: float('inf') for node in graph}
+    distances[start] = 0
+
+    # Step 2: Loop until all nodes are visited
+    while unvisited:
+        # Step 3: Pick the unvisited node with the smallest distance
+        current = min((node for node in unvisited), key=lambda node: distances[node])
+
+        # Step 4: Update distances of neighbors
+        for neighbor, weight in graph[current].items():
+            new_distance = distances[current] + weight
+            if new_distance < distances[neighbor]:
+                distances[neighbor] = new_distance
+
+        # Step 5: Mark current node as visited
+        unvisited.remove(current)
+
+    return distances
+
+def dijkstra_abs(graph,start):
+    # Step 1: Set initial distances to infinity, except for the start node
+    unvisited = list(graph.keys())
+    # distances = {node: absinf.absinf() for node in graph}
+    distances = {node: AbsInf() for node in graph}
+    distances[start] = 0
+
+    # Step 2: Loop until all nodes are visited
+    while unvisited:
+        # Step 3: Pick the unvisited node with the smallest distance
+        current = min((node for node in unvisited), key=lambda node: distances[node])
+
+        # Step 4: Update distances of neighbors
+        for neighbor, weight in graph[current].items():
+            new_distance = distances[current] + weight
+            if new_distance < distances[neighbor]:
+                distances[neighbor] = new_distance
+
+        # Step 5: Mark current node as visited
+        unvisited.remove(current)
+
+    return distances
+
+#Test Cases
+graph = {
+    'A': {'B': 10, 'C': 3},
+    'B': {'D': 2},
+    'C': {'B': 4, 'D': 8},
+    'D': {}
+}
+
+# 1. Linear / Chain
+Linear_Chain_1 = {"A": {"B": 2}, "B": {"C": 3}, "C": {"D": 1}, "D": {}}
+Linear_Chain_2 = {"1": {"2": 5}, "2": {"3": 4}, "3": {"4": 6}, "4": {"5": 2}, "5": {}}
+
+# 2. Sparse Tree
+Sparse_Tree_1 = {"A": {"B": 1, "C": 2}, "B": {"D": 4}, "C": {"E": 3}, "D": {}, "E": {}}
+Sparse_Tree_2 = {"1": {"2": 7}, "2": {"3": 5}, "3": {"4": 1, "5": 3}, "4": {}, "5": {}}
+
+# 3. Dense Graph
+Dense_Graph_1 = {
+    "A": {"B": 2, "C": 5, "D": 1},
+    "B": {"A": 2, "C": 3, "D": 2},
+    "C": {"A": 5, "B": 3, "D": 1},
+    "D": {"A": 1, "B": 2, "C": 1},
+}
+Dense_Graph_2 = {
+    "1": {"2": 1, "3": 2, "4": 3},
+    "2": {"1": 1, "3": 1, "4": 2},
+    "3": {"1": 2, "2": 1, "4": 1},
+    "4": {"1": 3, "2": 2, "3": 1},
+}
+
+# 4. Star Graph
+Star_Graph_1 = {"A": {"B": 2, "C": 3, "D": 1}, "B": {}, "C": {}, "D": {}}
+Star_Graph_2 = {"0": {"1": 5, "2": 4, "3": 6, "4": 7}, "1": {}, "2": {}, "3": {}, "4": {}}
+
+# 5. Disconnected Graph
+Disconnected_Graph_1 = {"A": {"B": 3}, "B": {"C": 4}, "C": {}, "X": {"Y": 1}, "Y": {}}
+Disconnected_Graph_2 = {"1": {"2": 1}, "2": {}, "3": {"4": 2}, "4": {}, "5": {}}
+
+# 6. Cycle Graph
+Cycle_Graph_1 = {"A": {"B": 1}, "B": {"C": 2}, "C": {"A": 3}}
+Cycle_Graph_2 = {"1": {"2": 1}, "2": {"3": 1}, "3": {"4": 1}, "4": {"1": 1}}
+
+# 7. Equal Weights
+Equal_Weights_1 = {"A": {"B": 1}, "B": {"C": 1}, "C": {"D": 1}, "D": {}}
+Equal_Weights_2 = {"1": {"2": 1, "3": 1}, "2": {"4": 1}, "3": {"4": 1}, "4": {}}
+
+# 8. Large Uniform Graph (e.g., 3x3 grid)
+Large_Uniform_Graph_1 = {
+    "A": {"B": 1, "D": 1},
+    "B": {"A": 1, "C": 1, "E": 1},
+    "C": {"B": 1, "F": 1},
+    "D": {"A": 1, "E": 1, "G": 1},
+    "E": {"B": 1, "D": 1, "F": 1, "H": 1},
+    "F": {"C": 1, "E": 1, "I": 1},
+    "G": {"D": 1, "H": 1},
+    "H": {"E": 1, "G": 1, "I": 1},
+    "I": {"F": 1, "H": 1},
+}
+Large_Uniform_Graph_2 = {
+    "1": {"2": 1, "4": 1},
+    "2": {"1": 1, "3": 1, "5": 1},
+    "3": {"2": 1, "6": 1},
+    "4": {"1": 1, "5": 1, "7": 1},
+    "5": {"2": 1, "4": 1, "6": 1, "8": 1},
+    "6": {"3": 1, "5": 1, "9": 1},
+    "7": {"4": 1, "8": 1},
+    "8": {"5": 1, "7": 1, "9": 1},
+    "9": {"6": 1, "8": 1},
+}
+
+# 9. Worst-case Tie Graph (same cost via all paths)
+Worst_Case_Tie_1 = {
+    "A": {"B": 1, "C": 1},
+    "B": {"D": 1},
+    "C": {"D": 1},
+    "D": {},
+}
+Worst_Case_Tie_2 = {
+    "1": {"2": 2, "3": 2},
+    "2": {"4": 2},
+    "3": {"4": 2},
+    "4": {},
+}
+
+# 10. Real-world-like Graph (road network style)
+Real_World_Like_1 = {
+    "Home": {"Gas_Station": 2, "Supermarket": 5},
+    "Gas_Station": {"Work": 6},
+    "Supermarket": {"Work": 2},
+    "Work": {},
+}
+Real_World_Like_2 = {
+    "Apt": {"Grocery": 3, "School": 6},
+    "Grocery": {"Mall": 4},
+    "School": {"Mall": 2},
+    "Mall": {"Office": 5},
+    "Office": {},
+}
+
+setup_code = '''
+from __main__ import (
+    dijkstra_basic, dijkstra_abs,
+    Linear_Chain_1, Linear_Chain_2,
+    Sparse_Tree_1, Sparse_Tree_2,
+    Dense_Graph_1, Dense_Graph_2,
+    Star_Graph_1, Star_Graph_2,
+    Disconnected_Graph_1, Disconnected_Graph_2,
+    Cycle_Graph_1, Cycle_Graph_2,
+    Equal_Weights_1, Equal_Weights_2,
+    Large_Uniform_Graph_1, Large_Uniform_Graph_2,
+    Worst_Case_Tie_1, Worst_Case_Tie_2,
+    Real_World_Like_1, Real_World_Like_2
+)
+'''
+
+
+# Linear / Chain
+Linear_Chain_test_basic1 = ''' 
+dijkstra_basic(Linear_Chain_1, 'A')
+'''
+Linear_Chain_test_abs1 = ''' 
+dijkstra_abs(Linear_Chain_1, 'A')
+'''
+
+Linear_Chain_test_basic2 = ''' 
+dijkstra_basic(Linear_Chain_2, '1')
+'''
+Linear_Chain_test_abs2 = ''' 
+dijkstra_abs(Linear_Chain_2, '1')
+'''
+
+# Sparse Tree
+Sparse_Tree_test_basic1 = ''' 
+dijkstra_basic(Sparse_Tree_1, 'A')
+'''
+Sparse_Tree_test_abs1 = ''' 
+dijkstra_abs(Sparse_Tree_1, 'A')
+'''
+
+Sparse_Tree_test_basic2 = ''' 
+dijkstra_basic(Sparse_Tree_2, '1')
+'''
+Sparse_Tree_test_abs2 = ''' 
+dijkstra_abs(Sparse_Tree_2, '1')
+'''
+
+# Dense Graph
+Dense_Graph_test_basic1 = ''' 
+dijkstra_basic(Dense_Graph_1, 'A')
+'''
+Dense_Graph_test_abs1 = ''' 
+dijkstra_abs(Dense_Graph_1, 'A')
+'''
+
+Dense_Graph_test_basic2 = ''' 
+dijkstra_basic(Dense_Graph_2, '1')
+'''
+Dense_Graph_test_abs2 = ''' 
+dijkstra_abs(Dense_Graph_2, '1')
+'''
+
+# Star Graph
+Star_Graph_test_basic1 = ''' 
+dijkstra_basic(Star_Graph_1, 'A')
+'''
+Star_Graph_test_abs1 = ''' 
+dijkstra_abs(Star_Graph_1, 'A')
+'''
+
+Star_Graph_test_basic2 = ''' 
+dijkstra_basic(Star_Graph_2, '0')
+'''
+Star_Graph_test_abs2 = ''' 
+dijkstra_abs(Star_Graph_2, '0')
+'''
+
+# Disconnected Graph
+Disconnected_Graph_test_basic1 = ''' 
+dijkstra_basic(Disconnected_Graph_1, 'A')
+'''
+Disconnected_Graph_test_abs1 = ''' 
+dijkstra_abs(Disconnected_Graph_1, 'A')
+'''
+
+Disconnected_Graph_test_basic2 = ''' 
+dijkstra_basic(Disconnected_Graph_2, '1')
+'''
+Disconnected_Graph_test_abs2 = ''' 
+dijkstra_abs(Disconnected_Graph_2, '1')
+'''
+
+# Cycle Graph
+Cycle_Graph_test_basic1 = ''' 
+dijkstra_basic(Cycle_Graph_1, 'A')
+'''
+Cycle_Graph_test_abs1 = ''' 
+dijkstra_abs(Cycle_Graph_1, 'A')
+'''
+
+Cycle_Graph_test_basic2 = ''' 
+dijkstra_basic(Cycle_Graph_2, '1')
+'''
+Cycle_Graph_test_abs2 = ''' 
+dijkstra_abs(Cycle_Graph_2, '1')
+'''
+
+# Equal Weights
+Equal_Weights_test_basic1 = ''' 
+dijkstra_basic(Equal_Weights_1, 'A')
+'''
+Equal_Weights_test_abs1 = ''' 
+dijkstra_abs(Equal_Weights_1, 'A')
+'''
+
+Equal_Weights_test_basic2 = ''' 
+dijkstra_basic(Equal_Weights_2, '1')
+'''
+Equal_Weights_test_abs2 = ''' 
+dijkstra_abs(Equal_Weights_2, '1')
+'''
+
+# Large Uniform Graph
+Large_Uniform_Graph_test_basic1 = ''' 
+dijkstra_basic(Large_Uniform_Graph_1, 'A')
+'''
+Large_Uniform_Graph_test_abs1 = ''' 
+dijkstra_abs(Large_Uniform_Graph_1, 'A')
+'''
+
+Large_Uniform_Graph_test_basic2 = ''' 
+dijkstra_basic(Large_Uniform_Graph_2, '1')
+'''
+Large_Uniform_Graph_test_abs2 = ''' 
+dijkstra_abs(Large_Uniform_Graph_2, '1')
+'''
+
+# Worst-case Tie Graph
+Worst_Case_Tie_test_basic1 = ''' 
+dijkstra_basic(Worst_Case_Tie_1, 'A')
+'''
+Worst_Case_Tie_test_abs1 = ''' 
+dijkstra_abs(Worst_Case_Tie_1, 'A')
+'''
+
+Worst_Case_Tie_test_basic2 = ''' 
+dijkstra_basic(Worst_Case_Tie_2, '1')
+'''
+Worst_Case_Tie_test_abs2 = ''' 
+dijkstra_abs(Worst_Case_Tie_2, '1')
+'''
+
+# Real-world-like Graph
+Real_World_Like_test_basic1 = ''' 
+dijkstra_basic(Real_World_Like_1, 'Home')
+'''
+Real_World_Like_test_abs1 = ''' 
+dijkstra_abs(Real_World_Like_1, 'Home')
+'''
+
+Real_World_Like_test_basic2 = ''' 
+dijkstra_basic(Real_World_Like_2, 'Apt')
+'''
+Real_World_Like_test_abs2 = ''' 
+dijkstra_abs(Real_World_Like_2, 'Apt')
+'''
+
+
+#Collect Data
+results = []  # 1 if AbsInf wins, 0 if float('inf') wins
+absinfTimes = []
+floatInfTimes = []
+
+for i in tqdm.tqdm(range(40)):
+    # Linear Chain
+    LinearChainBasicTest1 = timeit.timeit(stmt=Linear_Chain_test_basic1, setup=setup_code, number=50000)
+    LinearChainAbsTest1 = timeit.timeit(stmt=Linear_Chain_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(LinearChainAbsTest1)
+    floatInfTimes.append(LinearChainBasicTest1)
+    results.append(1 if LinearChainAbsTest1 < LinearChainBasicTest1 else 0)
+
+    LinearChainBasicTest2 = timeit.timeit(stmt=Linear_Chain_test_basic2, setup=setup_code, number=50000)
+    LinearChainAbsTest2 = timeit.timeit(stmt=Linear_Chain_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(LinearChainAbsTest2)
+    floatInfTimes.append(LinearChainBasicTest2)
+    results.append(1 if LinearChainAbsTest2 < LinearChainBasicTest2 else 0)
+
+    # Sparse Tree
+    SparseTreeBasicTest1 = timeit.timeit(stmt=Sparse_Tree_test_basic1, setup=setup_code, number=50000)
+    SparseTreeAbsTest1 = timeit.timeit(stmt=Sparse_Tree_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(SparseTreeAbsTest1)
+    floatInfTimes.append(SparseTreeBasicTest1)
+    results.append(1 if SparseTreeAbsTest1 < SparseTreeBasicTest1 else 0)
+
+    SparseTreeBasicTest2 = timeit.timeit(stmt=Sparse_Tree_test_basic2, setup=setup_code, number=50000)
+    SparseTreeAbsTest2 = timeit.timeit(stmt=Sparse_Tree_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(SparseTreeAbsTest2)
+    floatInfTimes.append(SparseTreeBasicTest2)
+    results.append(1 if SparseTreeAbsTest2 < SparseTreeBasicTest2 else 0)
+
+    # Dense Graph
+    DenseGraphBasicTest1 = timeit.timeit(stmt=Dense_Graph_test_basic1, setup=setup_code, number=50000)
+    DenseGraphAbsTest1 = timeit.timeit(stmt=Dense_Graph_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(DenseGraphAbsTest1)
+    floatInfTimes.append(DenseGraphBasicTest1)
+    results.append(1 if DenseGraphAbsTest1 < DenseGraphBasicTest1 else 0)
+
+    DenseGraphBasicTest2 = timeit.timeit(stmt=Dense_Graph_test_basic2, setup=setup_code, number=50000)
+    DenseGraphAbsTest2 = timeit.timeit(stmt=Dense_Graph_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(DenseGraphAbsTest2)
+    floatInfTimes.append(DenseGraphBasicTest2)
+    results.append(1 if DenseGraphAbsTest2 < DenseGraphBasicTest2 else 0)
+
+    # Star Graph
+    StarGraphBasicTest1 = timeit.timeit(stmt=Star_Graph_test_basic1, setup=setup_code, number=50000)
+    StarGraphAbsTest1 = timeit.timeit(stmt=Star_Graph_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(StarGraphAbsTest1)
+    floatInfTimes.append(StarGraphBasicTest1)
+    results.append(1 if StarGraphAbsTest1 < StarGraphBasicTest1 else 0)
+
+    StarGraphBasicTest2 = timeit.timeit(stmt=Star_Graph_test_basic2, setup=setup_code, number=50000)
+    StarGraphAbsTest2 = timeit.timeit(stmt=Star_Graph_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(StarGraphAbsTest2)
+    floatInfTimes.append(StarGraphBasicTest2)
+    results.append(1 if StarGraphAbsTest2 < StarGraphBasicTest2 else 0)
+
+    # Disconnected Graph
+    DisconnectedGraphBasicTest1 = timeit.timeit(stmt=Disconnected_Graph_test_basic1, setup=setup_code, number=50000)
+    DisconnectedGraphAbsTest1 = timeit.timeit(stmt=Disconnected_Graph_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(DisconnectedGraphAbsTest1)
+    floatInfTimes.append(DisconnectedGraphBasicTest1)
+    results.append(1 if DisconnectedGraphAbsTest1 < DisconnectedGraphBasicTest1 else 0)
+
+    DisconnectedGraphBasicTest2 = timeit.timeit(stmt=Disconnected_Graph_test_basic2, setup=setup_code, number=50000)
+    DisconnectedGraphAbsTest2 = timeit.timeit(stmt=Disconnected_Graph_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(DisconnectedGraphAbsTest2)
+    floatInfTimes.append(DisconnectedGraphBasicTest2)
+    results.append(1 if DisconnectedGraphAbsTest2 < DisconnectedGraphBasicTest2 else 0)
+
+    # Cycle Graph
+    CycleGraphBasicTest1 = timeit.timeit(stmt=Cycle_Graph_test_basic1, setup=setup_code, number=50000)
+    CycleGraphAbsTest1 = timeit.timeit(stmt=Cycle_Graph_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(CycleGraphAbsTest1)
+    floatInfTimes.append(CycleGraphBasicTest1)
+    results.append(1 if CycleGraphAbsTest1 < CycleGraphBasicTest1 else 0)
+
+    CycleGraphBasicTest2 = timeit.timeit(stmt=Cycle_Graph_test_basic2, setup=setup_code, number=50000)
+    CycleGraphAbsTest2 = timeit.timeit(stmt=Cycle_Graph_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(CycleGraphAbsTest2)
+    floatInfTimes.append(CycleGraphBasicTest2)
+    results.append(1 if CycleGraphAbsTest2 < CycleGraphBasicTest2 else 0)
+
+    # Equal Weights
+    EqualWeightsBasicTest1 = timeit.timeit(stmt=Equal_Weights_test_basic1, setup=setup_code, number=50000)
+    EqualWeightsAbsTest1 = timeit.timeit(stmt=Equal_Weights_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(EqualWeightsAbsTest1)
+    floatInfTimes.append(EqualWeightsBasicTest1)
+    results.append(1 if EqualWeightsAbsTest1 < EqualWeightsBasicTest1 else 0)
+
+    EqualWeightsBasicTest2 = timeit.timeit(stmt=Equal_Weights_test_basic2, setup=setup_code, number=50000)
+    EqualWeightsAbsTest2 = timeit.timeit(stmt=Equal_Weights_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(EqualWeightsAbsTest2)
+    floatInfTimes.append(EqualWeightsBasicTest2)
+    results.append(1 if EqualWeightsAbsTest2 < EqualWeightsBasicTest2 else 0)
+
+    # Large Uniform Graph
+    LargeUniformGraphBasicTest1 = timeit.timeit(stmt=Large_Uniform_Graph_test_basic1, setup=setup_code, number=50000)
+    LargeUniformGraphAbsTest1 = timeit.timeit(stmt=Large_Uniform_Graph_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(LargeUniformGraphAbsTest1)
+    floatInfTimes.append(LargeUniformGraphBasicTest1)
+    results.append(1 if LargeUniformGraphAbsTest1 < LargeUniformGraphBasicTest1 else 0)
+
+    LargeUniformGraphBasicTest2 = timeit.timeit(stmt=Large_Uniform_Graph_test_basic2, setup=setup_code, number=50000)
+    LargeUniformGraphAbsTest2 = timeit.timeit(stmt=Large_Uniform_Graph_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(LargeUniformGraphAbsTest2)
+    floatInfTimes.append(LargeUniformGraphBasicTest2)
+    results.append(1 if LargeUniformGraphAbsTest2 < LargeUniformGraphBasicTest2 else 0)
+
+    # Worst Case Tie Graph
+    WorstCaseTieBasicTest1 = timeit.timeit(stmt=Worst_Case_Tie_test_basic1, setup=setup_code, number=50000)
+    WorstCaseTieAbsTest1 = timeit.timeit(stmt=Worst_Case_Tie_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(WorstCaseTieAbsTest1)
+    floatInfTimes.append(WorstCaseTieBasicTest1)
+    results.append(1 if WorstCaseTieAbsTest1 < WorstCaseTieBasicTest1 else 0)
+
+    WorstCaseTieBasicTest2 = timeit.timeit(stmt=Worst_Case_Tie_test_basic2, setup=setup_code, number=50000)
+    WorstCaseTieAbsTest2 = timeit.timeit(stmt=Worst_Case_Tie_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(WorstCaseTieAbsTest2)
+    floatInfTimes.append(WorstCaseTieBasicTest2)
+    results.append(1 if WorstCaseTieAbsTest2 < WorstCaseTieBasicTest2 else 0)
+
+    # Real World Graph
+    RealWorldGraphBasicTest1 = timeit.timeit(stmt=Real_World_Like_test_basic1, setup=setup_code, number=50000)
+    RealWorldGraphAbsTest1 = timeit.timeit(stmt=Real_World_Like_test_abs1, setup=setup_code, number=50000)
+    absinfTimes.append(RealWorldGraphAbsTest1)
+    floatInfTimes.append(RealWorldGraphBasicTest1)
+    results.append(1 if RealWorldGraphAbsTest1 < RealWorldGraphBasicTest1 else 0)
+
+    RealWorldGraphBasicTest2 = timeit.timeit(stmt=Real_World_Like_test_basic2, setup=setup_code, number=50000)
+    RealWorldGraphAbsTest2 = timeit.timeit(stmt=Real_World_Like_test_abs2, setup=setup_code, number=50000)
+    absinfTimes.append(RealWorldGraphAbsTest2)
+    floatInfTimes.append(RealWorldGraphBasicTest2)
+    results.append(1 if RealWorldGraphAbsTest2 < RealWorldGraphBasicTest2 else 0)
+
+
+#Compute from data
+def computeMeanStdDev(inputData):
+    mean = sum(inputData) / len(inputData)
+    squared_diffs = [(x - mean) ** 2 for x in inputData]
+    variance = sum(squared_diffs) / (len(inputData) - 1)
+    std_dev = math.sqrt(variance)
+    return {
+        "mean":mean,
+        "Standard_Deviation":std_dev,
+        "number_of_elements":len(inputData)
+    }
+
+absinfStats = computeMeanStdDev(absinfTimes)
+floatInfStats = computeMeanStdDev(floatInfTimes)
+finalResultStats = computeMeanStdDev(results)
+
+#one tailed two sided t test
+x1 = absinfStats['mean']
+x2 = floatInfStats['mean']
+s1 = absinfStats['Standard_Deviation']
+s2 = floatInfStats['Standard_Deviation']
+n1 = absinfStats['number_of_elements']
+n2 = floatInfStats['number_of_elements']
+s1n1 = (s1**2)/n1
+s2n2 = (s2**2)/n2
+t_score = (x1-x2)/(math.sqrt(s1n1+s2n2))
+degf = ((s1n1+s2n2)**2)/(((s1n1**2)/(n1-1))+((s2n2**2)/(n2-1)))
+
+print("The CDF of the test: "+str(t.cdf(t_score,degf)))
+print("AbsInf was faster in approximately "+str(finalResultStats['mean']*100)+ "% ± "+str(finalResultStats['Standard_Deviation']*100)+"%"+" of tests")
